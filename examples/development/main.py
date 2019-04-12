@@ -38,7 +38,7 @@ class ExperimentRunner(tune.Trainable):
 
     def _build(self):
         variant = copy.deepcopy(self._variant)
-
+        print(variant)
         environment_params = variant['environment_params']
         training_environment = self.training_environment = (
             get_environment_from_params(environment_params['training']))
@@ -220,6 +220,7 @@ def main(argv=None):
     instructions.
     """
     # __package__ should be `development.main`
+    __package__ == 'development'
     run_example_local(__package__, argv)
 
 

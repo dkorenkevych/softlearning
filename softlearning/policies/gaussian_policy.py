@@ -6,7 +6,9 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 from softlearning.distributions.squash_bijector import SquashBijector
-from softlearning.models.feedforward import feedforward_model
+from softlearning.models.feedforward import feedforward_model, cnn_model
+
+
 
 from .base_policy import LatentSpacePolicy
 
@@ -236,5 +238,8 @@ class FeedforwardGaussianPolicy(GaussianPolicy):
             output_size=output_size,
             activation=self._activation,
             output_activation=self._output_activation)
-
+        # shift_and_log_scale_diag_net = cnn_model(
+        #     input_shapes = [(7 + 4*256*256,)],
+        #     output_size = output_size
+        # )
         return shift_and_log_scale_diag_net
