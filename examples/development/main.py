@@ -220,7 +220,7 @@ def main(argv=None):
     instructions.
     """
     # __package__ should be `development.main`
-    __package__ == 'development'
+    __package__ == 'development.main'
     run_example_local(__package__, argv)
 
 

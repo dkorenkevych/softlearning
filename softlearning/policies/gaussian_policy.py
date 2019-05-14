@@ -10,6 +10,8 @@ from softlearning.models.feedforward import feedforward_model, cnn_model
 
 
 
+from rl_experiments.algorithms.baselines.policies.cnn_policy import CnnPolicy
+
 from .base_policy import LatentSpacePolicy
 
 
@@ -232,14 +234,15 @@ class FeedforwardGaussianPolicy(GaussianPolicy):
         super(FeedforwardGaussianPolicy, self).__init__(*args, **kwargs)
 
     def _shift_and_log_scale_diag_net(self, input_shapes, output_size):
-        shift_and_log_scale_diag_net = feedforward_model(
-            input_shapes=input_shapes,
-            hidden_layer_sizes=self._hidden_layer_sizes,
-            output_size=output_size,
-            activation=self._activation,
-            output_activation=self._output_activation)
-        # shift_and_log_scale_diag_net = cnn_model(
-        #     input_shapes = [(7 + 4*256*256,)],
-        #     output_size = output_size
-        # )
+        # shift_and_log_scale_diag_net = feedforward_model(
+        #     input_shapes=input_shapes,
+        #     hidden_layer_sizes=self._hidden_layer_sizes,
+        #     output_size=output_size,
+        #     activation=self._activation,
+        #     output_activation=self._output_activation)
+
+        shift_and_log_scale_diag_net = cnn_model(
+            input_shapes = [(7 + 4*256*256,)],
+            output_size = output_size
+        )
         return shift_and_log_scale_diag_net
