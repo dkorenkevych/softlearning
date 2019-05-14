@@ -116,6 +116,7 @@ NUM_EPOCHS_PER_DOMAIN = {
     'Point2DEnv': int(200),
     'Reacher': int(200),
     'Pendulum': 10,
+    'Sawyer': int(1e4),
 }
 
 ALGORITHM_PARAMS_PER_DOMAIN = {
@@ -189,6 +190,28 @@ ENVIRONMENT_PARAMS = {
         'Wall-v0': {
             'observation_keys': ('observation', 'desired_goal'),
         },
+    },
+    'Sawyer': {
+        task_name: {
+            'has_renderer': False,
+            'has_offscreen_renderer': False,
+            'use_camera_obs': False,
+            'reward_shaping': tune.grid_search([True, False]),
+        }
+        for task_name in (
+                'Lift',
+                'NutAssembly',
+                'NutAssemblyRound',
+                'NutAssemblySingle',
+                'NutAssemblySquare',
+                'PickPlace',
+                'PickPlaceBread',
+                'PickPlaceCan',
+                'PickPlaceCereal',
+                'PickPlaceMilk',
+                'PickPlaceSingle',
+                'Stack',
+        )
     }
 }
 
@@ -205,7 +228,7 @@ def get_variant_spec_base(universe, domain, task, policy, algorithm):
         ALGORITHM_PARAMS_ADDITIONAL.get(algorithm, {})
     )
     variant_spec = {
-        'git_sha': get_git_rev(),
+        'git_sha': get_git_rev(__file__),
 
         'environment_params': {
             'training': {
@@ -286,8 +309,9 @@ def get_variant_spec_image(universe,
             'kwargs': {
                 'image_shape': (
                     variant_spec
-                    ['training']
                     ['environment_params']
+                    ['training']
+                    ['kwargs']
                     ['image_shape']),
                 'output_size': M,
                 'conv_filters': (4, 4),

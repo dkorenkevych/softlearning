@@ -219,6 +219,7 @@ def main(argv=None):
     Run 'softlearning launch_example_{gce,ec2} --help' for further
     instructions.
     """
+
     # __package__ should be `development.main`
     __package__ == 'development.main'
     run_example_local(__package__, argv)
