@@ -83,7 +83,7 @@ class LatentSpacePolicy(BasePolicy):
         if self._deterministic:
             return self.deterministic_actions_model.predict(conditions)
         elif self._smoothing_alpha == 0:
-            return self.actions_model.predict(conditions)
+            return self.extended_actions_model.predict(conditions)
         else:
             alpha, beta = self._smoothing_alpha, self._smoothing_beta
             raw_latents = self.latents_model.predict(conditions)

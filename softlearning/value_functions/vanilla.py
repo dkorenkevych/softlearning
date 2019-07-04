@@ -9,17 +9,17 @@ def create_feedforward_Q_function(observation_shape,
                                   **kwargs):
     input_shapes = (observation_shape, action_shape)
     preprocessors = (observation_preprocessor, None)
-    # return feedforward_model(
-    #     input_shapes,
-    #     *args,
-    #     output_size=1,
-    #     preprocessors=preprocessors,
-    #     name=name,
-    #     **kwargs)
-    return cnn_model(
-            input_shapes = [observation_shape, action_shape],
-            output_size = 1
-        )
+    return feedforward_model(
+        input_shapes,
+        *args,
+        output_size=1,
+        preprocessors=preprocessors,
+        name=name,
+        **kwargs)
+    # return cnn_model(
+    #         input_shapes = [observation_shape, action_shape],
+    #         output_size = 1
+    #     )
 
 
 def create_feedforward_V_function(observation_shape,
