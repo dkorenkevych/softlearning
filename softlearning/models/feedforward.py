@@ -108,24 +108,28 @@ def cnn_model(input_shapes,
     x_image = TimeDistributed(Conv2D(64, (5, 5), strides=(2, 2),
                                      activation="relu"))(x_image)
 
-    x_image = TimeDistributed(Conv2D(128, (5, 5), strides=(1, 1),
+    x_image = TimeDistributed(Conv2D(64, (5, 5), strides=(2, 2),
                                      activation="relu"))(x_image)
 
-    x_image = TimeDistributed(Conv2D(128, (5, 5), strides=(1, 1),
+    x_image = TimeDistributed(Conv2D(64, (5, 5), strides=(2, 2),
                                      activation="relu"))(x_image)
 
-    x_image = TimeDistributed(Conv2D(128, (3, 3), strides=(1, 1),
+    x_image = TimeDistributed(Conv2D(64, (3, 3), strides=(1, 1),
                                      activation="relu"))(x_image)
 
 
     #x_image = TimeDistributed(keras_lambda(tf.contrib.layers.spatial_softmax))(x_image)
-    x_image = Reshape((4*20*20*128,))(x_image)
+    #pool = TimeDistributed(GlobalAveragePooling2D())(x_image)
+    #x_image = TimeDistributed(Lambda(tf.contrib.layers.spatial_softmax))(x_image)
+    #x_image = Concatenate(axis=-1)([x_image, pool])
+    x_image = Flatten()(x_image)
+    #x_image = Reshape((4*20*20*128,))(x_image)
     x_scalar = ob_scalar
     x_image = Dense(256, activation='relu', name='lin1')(x_image)
     x = Concatenate()([x_image, x_scalar])
     # x = x_image
-    x = Dense(128, activation='relu', name='lin2')(x)
-    x = Dense(128, activation='relu', name='lin3')(x)
+    x = Dense(256, activation='relu', name='lin2')(x)
+    x = Dense(256, activation='relu', name='lin3')(x)
     out = Dense(output_size, name='final')(x)
     model = PicklableKerasModel(inputs, out, name=name)
 

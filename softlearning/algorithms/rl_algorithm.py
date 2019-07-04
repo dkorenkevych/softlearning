@@ -93,7 +93,7 @@ class RLAlgorithm(tf.contrib.checkpoint.Checkpointable):
                 " n_initial_exploration_steps > 0.")
 
         self.sampler.initialize(env, initial_exploration_policy, pool)
-        while pool.size < self._n_initial_exploration_steps:
+        while pool.db.last_id < self._n_initial_exploration_steps:
             self.sampler.sample()
 
     def _training_before_hook(self):
@@ -333,9 +333,13 @@ class RLAlgorithm(tf.contrib.checkpoint.Checkpointable):
         if trained_enough: return
 
         for i in range(self._n_train_repeat):
-            self._do_training(
-                iteration=timestep,
-                batch=self._training_batch())
+            try:
+                self._do_training(
+                    iteration=timestep,
+                    batch=self._training_batch())
+            except:
+                print("failed to train")
+                continue
 
         self._num_train_steps += self._n_train_repeat
         self._train_steps_this_epoch += self._n_train_repeat

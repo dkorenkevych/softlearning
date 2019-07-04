@@ -34,11 +34,15 @@ def normalize_observation_fields(observation_space, name='observations'):
 
 
 class SimpleReplayPool(FlexibleReplayPool):
-    def __init__(self, observation_space, action_space, *args, **kwargs):
+    def __init__(self, observation_space, action_space, img_dim=(0,), db_manager=None, *args, **kwargs):
         self._observation_space = observation_space
         self._action_space = action_space
+        self.img_dim = img_dim
+        self.db = db_manager
 
         observation_fields = normalize_observation_fields(observation_space)
+        observation_fields['observations']['shape'] = (observation_space.shape[-1] - np.product(self.img_dim),)
+        observation_fields['images'] = {'dtype': 'uint8', 'shape': (np.product(self.img_dim),)}
         # It's a bit memory inefficient to save the observations twice,
         # but it makes the code *much* easier since you no longer have
         # to worry about termination conditions.
@@ -69,8 +73,30 @@ class SimpleReplayPool(FlexibleReplayPool):
         super(SimpleReplayPool, self).__init__(
             *args, fields_attrs=fields, **kwargs)
 
+    def add_samples_base(self, samples):
+        field_names = list(samples.keys())
+        num_samples = samples[field_names[0]].shape[0]
+
+        index = np.arange(
+            self._pointer, self._pointer + num_samples) % self._max_size
+
+        for field_name in self.field_names:
+            default_value = (
+                self.fields_attrs[field_name].get('default_value', 0.0))
+            values = samples.get(field_name, default_value)
+            assert values.shape[0] == num_samples
+            self.fields[field_name][index] = values
+
+    def random_batch(self, batch_size, field_name_filter=None, **kwargs):
+        random_indices = np.random.choice(range(self.db.last_id), batch_size, replace=False)
+        return self.batch_by_indices_db(
+            random_indices, field_name_filter=field_name_filter, **kwargs)
+
+
     def add_samples(self, samples):
         if not isinstance(self._observation_space, Dict):
+            self.db.save_samples(samples)
+            return
             return super(SimpleReplayPool, self).add_samples(samples)
 
         dict_observations = defaultdict(list)
@@ -98,6 +124,39 @@ class SimpleReplayPool(FlexibleReplayPool):
         del samples['next_observations']
 
         return super(SimpleReplayPool, self).add_samples(samples)
+
+    def batch_by_indices(self, indices, field_name_filter=None):
+        if np.any(indices % self._max_size > self.size):
+            raise ValueError(
+                "Tried to retrieve batch with indices greater than current"
+                " size")
+
+        field_names = self.field_names
+        if field_name_filter is not None:
+            field_names = self.filter_fields(
+                field_names, field_name_filter)
+
+        return {
+            field_name: self.fields[field_name][indices]
+            for field_name in field_names
+        }
+
+    def batch_by_indices_db(self,
+                         indices,
+                         field_name_filter=None,
+                         observation_keys=None):
+        data = self.db.get_samples_by_id(indices)
+
+        field_names = self.field_names
+        if field_name_filter is not None:
+            field_names = self.filter_fields(
+                field_names, field_name_filter)
+
+        return {
+            field_name: np.stack(data[field_name])
+            for field_name in field_names
+        }
+
 
     def batch_by_indices(self,
                          indices,

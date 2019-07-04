@@ -41,7 +41,7 @@ class BaseSampler(object):
         raise NotImplementedError
 
     def batch_ready(self):
-        enough_samples = self.pool.size >= self._min_pool_size
+        enough_samples = self.pool.db.last_id >= self._min_pool_size
         return enough_samples
 
     def random_batch(self, batch_size=None, **kwargs):

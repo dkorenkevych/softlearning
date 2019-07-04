@@ -24,13 +24,16 @@ class SimpleSampler(BaseSampler):
                               reward,
                               terminal,
                               next_observation,
-                              info):
+                              info,
+                              img_dim=(0,)):
         processed_observation = {
-            'observations': observation,
+            'observations': observation[np.product(img_dim):],
+            'images': (observation[:np.product(img_dim)]*255).astype('uint8'),
             'actions': action,
             'rewards': [reward],
             'terminals': [terminal],
-            'next_observations': next_observation,
+            'next_observations': next_observation[np.product(img_dim):],
+            'next_images': (next_observation[:np.product(img_dim)] * 255).astype('uint8'),
             'infos': info,
         }
 
@@ -57,8 +60,9 @@ class SimpleSampler(BaseSampler):
             terminal=terminal,
             next_observation=next_observation,
             info=info,
+            img_dim=(4, 256, 256, 1)
         )
-
+        self.pool.add_samples(processed_sample)
         for key, value in processed_sample.items():
             self._current_path[key].append(value)
 
@@ -67,7 +71,7 @@ class SimpleSampler(BaseSampler):
                 field_name: np.array(values)
                 for field_name, values in self._current_path.items()
             }
-            self.pool.add_path(last_path)
+            #self.pool.add_path(last_path)
             self._last_n_paths.appendleft(last_path)
 
             self._max_path_return = max(self._max_path_return,
@@ -89,9 +93,13 @@ class SimpleSampler(BaseSampler):
     def random_batch(self, batch_size=None, **kwargs):
         batch_size = batch_size or self._batch_size
         observation_keys = getattr(self.env, 'observation_keys', None)
-
-        return self.pool.random_batch(
+        batch = self.pool.random_batch(
             batch_size, observation_keys=observation_keys, **kwargs)
+        batch['observations'] = np.hstack([batch['images'].astype('float32')/255, batch['observations']])
+        batch['next_observations'] = np.hstack([batch['next_images'].astype('float32')/255, batch['next_observations']])
+        del batch['images']
+        del batch['next_images']
+        return batch
 
     def get_diagnostics(self):
         diagnostics = super(SimpleSampler, self).get_diagnostics()
