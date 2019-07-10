@@ -81,6 +81,7 @@ class SAC(RLAlgorithm):
 
         self._policy_lr = lr
         self._Q_lr = lr
+        self._average_gradients = 8
 
         self._reward_scale = reward_scale
         self._target_entropy = (
@@ -110,6 +111,9 @@ class SAC(RLAlgorithm):
 
     def _build(self):
         self._training_ops = {}
+        self._grad_ops = {}
+        self._grad_placeholders = {}
+        self._gradients = {}
 
         self._init_global_step()
         self._init_placeholders()
@@ -220,12 +224,46 @@ class SAC(RLAlgorithm):
                 name='{}_{}_optimizer'.format(Q._name, i)
             ) for i, Q in enumerate(self._Qs))
 
-        Q_training_ops = tuple(
-            Q_optimizer.minimize(loss=Q_loss, var_list=Q.trainable_variables)
+        # grads_and_vars = optimizer.compute_gradients(self._loss_op)
+        # avg_grads_and_vars = []
+        # self._grad_placeholders = []
+        # for grad, var in grads_and_vars:
+        #     grad_ph = tf.placeholder(grad.dtype, grad.shape)
+        #     self._grad_placeholders.append(grad_ph)
+        #     avg_grads_and_vars.append((grad_ph, var))
+        # self._grad_op = [x[0] for x in grads_and_vars]
+        # self._train_op = optimizer.apply_gradients(avg_grads_and_vars)
+        # self._gradients = []
+
+        Q_grads = tuple(
+            Q_optimizer.compute_gradients(loss=Q_loss, var_list=Q.trainable_variables)
             for i, (Q, Q_loss, Q_optimizer)
             in enumerate(zip(self._Qs, Q_losses, self._Q_optimizers)))
 
-        self._training_ops.update({'Q': tf.group(Q_training_ops)})
+        Q_grad_op = []
+        Q_train_op = []
+        Q_grad_placeholders = []
+
+        for i, net in enumerate(Q_grads):
+            avg_grads_and_vars = []
+            for grad, var in net:
+                grad_ph = tf.placeholder(grad.dtype, grad.shape)
+                Q_grad_placeholders.append(grad_ph)
+                avg_grads_and_vars.append((grad_ph, var))
+                Q_grad_op.append(grad)
+            Q_train_op.append(self._Q_optimizers[i].apply_gradients(avg_grads_and_vars))
+
+        self._gradients.update({'Q': []})
+        self._grad_ops.update({'Q': Q_grad_op})
+        self._training_ops.update({'Q': tf.group(Q_train_op)})
+        self._grad_placeholders.update({'Q': Q_grad_placeholders})
+
+        # Q_training_ops = tuple(
+        #     Q_optimizer.minimize(loss=Q_loss, var_list=Q.trainable_variables)
+        #     for i, (Q, Q_loss, Q_optimizer)
+        #     in enumerate(zip(self._Qs, Q_losses, self._Q_optimizers)))
+        #
+        # self._training_ops.update({'Q': tf.group(Q_training_ops)})
 
     def _init_actor_update(self):
         """Create minimization operations for policy and entropy.
@@ -255,12 +293,34 @@ class SAC(RLAlgorithm):
 
             self._alpha_optimizer = tf.train.AdamOptimizer(
                 self._policy_lr, name='alpha_optimizer')
-            self._alpha_train_op = self._alpha_optimizer.minimize(
-                loss=alpha_loss, var_list=[log_alpha])
+            # self._alpha_train_op = self._alpha_optimizer.minimize(
+            #     loss=alpha_loss, var_list=[log_alpha])
 
-            self._training_ops.update({
-                'temperature_alpha': self._alpha_train_op
-            })
+            alpha_grads = self._alpha_optimizer.compute_gradients(loss=alpha_loss, var_list=[log_alpha])
+
+            alpha_grad_op = []
+            alpha_train_op = []
+            alpha_grad_placeholders = []
+
+            avg_grads_and_vars = []
+            for grad, var in alpha_grads:
+                grad_ph = tf.placeholder(grad.dtype, grad.shape)
+                alpha_grad_placeholders.append(grad_ph)
+                avg_grads_and_vars.append((grad_ph, var))
+                alpha_grad_op.append(grad)
+            alpha_train_op.append(self._alpha_optimizer.apply_gradients(avg_grads_and_vars))
+
+            self._gradients.update({'temperature_alpha': []})
+            self._grad_ops.update({'temperature_alpha': alpha_grad_op})
+            self._training_ops.update({'temperature_alpha': alpha_train_op})
+            self._grad_placeholders.update({'temperature_alpha': alpha_grad_placeholders})
+
+
+
+
+            # self._training_ops.update({
+            #     'temperature_alpha': self._alpha_train_op
+            # })
 
         self._alpha = alpha
 
@@ -294,11 +354,30 @@ class SAC(RLAlgorithm):
             learning_rate=self._policy_lr,
             name="policy_optimizer")
 
-        policy_train_op = self._policy_optimizer.minimize(
-            loss=policy_loss,
-            var_list=self._policy.trainable_variables)
+        # policy_train_op = self._policy_optimizer.minimize(
+        #     loss=policy_loss,
+        #     var_list=self._policy.trainable_variables)
 
+        policy_grads = self._policy_optimizer.compute_gradients(loss=policy_loss, var_list=self._policy.trainable_variables)
+
+        policy_grad_op = []
+        policy_train_op = []
+        policy_grad_placeholders = []
+
+        avg_grads_and_vars = []
+        for grad, var in policy_grads:
+            grad_ph = tf.placeholder(grad.dtype, grad.shape)
+            policy_grad_placeholders.append(grad_ph)
+            avg_grads_and_vars.append((grad_ph, var))
+            policy_grad_op.append(grad)
+        policy_train_op.append(self._policy_optimizer.apply_gradients(avg_grads_and_vars))
+
+        self._gradients.update({'policy_train_op': []})
+        self._grad_ops.update({'policy_train_op': policy_grad_op})
         self._training_ops.update({'policy_train_op': policy_train_op})
+        self._grad_placeholders.update({'policy_train_op': policy_grad_placeholders})
+
+        #self._training_ops.update({'policy_train_op': policy_train_op})
 
     def _init_diagnostics_ops(self):
         diagnosables = OrderedDict((
@@ -337,9 +416,21 @@ class SAC(RLAlgorithm):
         """Runs the operations for updating training and target ops."""
 
         feed_dict = self._get_feed_dict(iteration, batch)
-        self._session.run(self._training_ops, feed_dict)
+        grads = self._session.run(self._grad_ops, feed_dict=feed_dict)
+        for net in self._grad_ops:
+            self._gradients[net].append(grads[net])
+            if len(self._gradients[net]) == self._average_gradients:
+                for i, placeholder in enumerate(self._grad_placeholders[net]):
+                    feed_dict[placeholder] = np.stack([g[i] for g in self._gradients[net]], axis=0).mean(axis=0)
+                self._session.run(self._training_ops[net], feed_dict=feed_dict)
+                self._gradients[net] = []
 
-        if iteration % self._target_update_interval == 0:
+
+
+
+        #self._session.run(self._training_ops, feed_dict)
+
+        if (iteration//self._average_gradients) % self._target_update_interval == 0:
             # Run target ops here.
             self._update_target()
 
