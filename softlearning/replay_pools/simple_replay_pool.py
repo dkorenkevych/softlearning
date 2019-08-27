@@ -187,11 +187,11 @@ class SimpleReplayPool(FlexibleReplayPool):
 
         samples.update(
            **{
-               'observations.{observation_key}': np.array(values)
+               f'observations.{observation_key}': np.array(values)
                for observation_key, values in dict_observations.items()
            },
            **{
-               'next_observations.{observation_key}': np.array(values)
+               f'next_observations.{observation_key}': np.array(values)
                for observation_key, values in dict_next_observations.items()
            },
         )
