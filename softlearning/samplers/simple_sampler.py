@@ -1,4 +1,5 @@
 from collections import defaultdict
+import time
 
 import numpy as np
 
@@ -21,6 +22,7 @@ class SimpleSampler(BaseSampler):
     def _process_observations(self,
                               observation,
                               action,
+                              mean_action,
                               reward,
                               terminal,
                               next_observation,
@@ -30,6 +32,7 @@ class SimpleSampler(BaseSampler):
             'observations': observation[np.product(img_dim):],
             'images': (observation[:np.product(img_dim)]*255).astype('uint8'),
             'actions': action,
+            'mean_actions': mean_action,
             'rewards': [reward],
             'terminals': [terminal],
             'next_observations': next_observation[np.product(img_dim):],
@@ -56,12 +59,14 @@ class SimpleSampler(BaseSampler):
         processed_sample = self._process_observations(
             observation=self._current_observation,
             action=action,
+            mean_action=None,
             reward=reward,
             terminal=terminal,
             next_observation=next_observation,
             info=info,
             img_dim=(4, 256, 256, 1)
         )
+        self.policy.ob_rms.update(np.expand_dims(self._current_observation, axis=0))
         self.pool.add_samples(processed_sample)
         for key, value in processed_sample.items():
             self._current_path[key].append(value)
@@ -93,10 +98,17 @@ class SimpleSampler(BaseSampler):
     def random_batch(self, batch_size=None, **kwargs):
         batch_size = batch_size or self._batch_size
         observation_keys = getattr(self.env, 'observation_keys', None)
+        start = time.time()
         batch = self.pool.random_batch(
             batch_size, observation_keys=observation_keys, **kwargs)
+        print("pool batch time", time.time() - start)
+        start = time.time()
         batch['observations'] = np.hstack([batch['images'].astype('float32')/255, batch['observations']])
+        #self.policy.ob_rms.update(batch['observations'])
+        batch['observations'] = self.policy.rms_fn([batch['observations']])[0]
+        print("batch processing", time.time() - start)
         batch['next_observations'] = np.hstack([batch['next_images'].astype('float32')/255, batch['next_observations']])
+        batch['next_observations'] = self.policy.rms_fn([batch['next_observations']])[0]
         del batch['images']
         del batch['next_images']
         return batch

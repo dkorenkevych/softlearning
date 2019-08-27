@@ -4,6 +4,7 @@ from numbers import Number
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+import time
 
 from .rl_algorithm import RLAlgorithm
 
@@ -81,7 +82,7 @@ class SAC(RLAlgorithm):
 
         self._policy_lr = lr
         self._Q_lr = lr
-        self._average_gradients = 8
+        self._average_gradients = 9
 
         self._reward_scale = reward_scale
         self._target_entropy = (
@@ -414,9 +415,11 @@ class SAC(RLAlgorithm):
 
     def _do_training(self, iteration, batch):
         """Runs the operations for updating training and target ops."""
-
         feed_dict = self._get_feed_dict(iteration, batch)
+        start = time.time()
         grads = self._session.run(self._grad_ops, feed_dict=feed_dict)
+        print("grads time", time.time() - start)
+        start = time.time()
         for net in self._grad_ops:
             self._gradients[net].append(grads[net])
             if len(self._gradients[net]) == self._average_gradients:
@@ -424,6 +427,7 @@ class SAC(RLAlgorithm):
                     feed_dict[placeholder] = np.stack([g[i] for g in self._gradients[net]], axis=0).mean(axis=0)
                 self._session.run(self._training_ops[net], feed_dict=feed_dict)
                 self._gradients[net] = []
+        print("grads processing time", time.time() - start)
 
 
 

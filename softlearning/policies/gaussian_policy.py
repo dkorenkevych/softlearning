@@ -7,6 +7,9 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from softlearning.distributions.squash_bijector import SquashBijector
 from softlearning.models.feedforward import feedforward_model, cnn_model
+from baselines.common.mpi_running_mean_std import RunningMeanStd
+from keras.backend import Function
+import baselines.common.tf_util as U
 
 
 
@@ -48,6 +51,12 @@ class GaussianPolicy(LatentSpacePolicy):
 
         if preprocessor is not None:
             conditions = preprocessor(conditions)
+
+        self.ob_rms = RunningMeanStd(shape=input_shapes[0])
+        ob = U.get_placeholder(name="ob", dtype=tf.float32, shape=(None,) + input_shapes[0])
+        norm_ob = tf.clip_by_value((ob - self.ob_rms.mean) / self.ob_rms.std, -5.0, 5.0)
+        self.rms_fn = Function([ob], [norm_ob])
+        #conditions = tf.clip_by_value((conditions - self.ob_rms.mean) / self.ob_rms.std, -5.0, 5.0)
 
         shift_and_log_scale_diag = self._shift_and_log_scale_diag_net(
             input_shapes=(conditions.shape[1:], ),

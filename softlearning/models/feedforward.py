@@ -101,21 +101,26 @@ def cnn_model(input_shapes,
     #ob_scalar = ob[:, (4 * np.product(img_dim)):]
     ob_scalar = Lambda(lambda x: x[:, (4 * np.product(img_dim)):])(ob)
 
-    x_image = ob_image
+    x_image = Lambda(lambda x: x - tf.reduce_mean(x, axis=[-3, -2, -1], keep_dims=True))(ob_image)
     x_image = TimeDistributed(Conv2D(32, (8, 8), strides=(4, 4),
-                                     activation="relu"))(x_image)
+                                     activation="relu",
+                                     padding='same'))(x_image)
 
     x_image = TimeDistributed(Conv2D(64, (5, 5), strides=(2, 2),
-                                     activation="relu"))(x_image)
+                                     activation="relu",
+                                     padding='same'))(x_image)
 
     x_image = TimeDistributed(Conv2D(64, (5, 5), strides=(2, 2),
-                                     activation="relu"))(x_image)
+                                     activation="relu",
+                                     padding='same'))(x_image)
 
-    x_image = TimeDistributed(Conv2D(64, (5, 5), strides=(2, 2),
-                                     activation="relu"))(x_image)
+    x_image = TimeDistributed(Conv2D(64, (5, 5), strides=(1, 1),
+                                     activation="relu",
+                                     padding='same'))(x_image)
 
     x_image = TimeDistributed(Conv2D(64, (3, 3), strides=(1, 1),
-                                     activation="relu"))(x_image)
+                                     activation="relu",
+                                     padding='same'))(x_image)
 
 
     #x_image = TimeDistributed(keras_lambda(tf.contrib.layers.spatial_softmax))(x_image)

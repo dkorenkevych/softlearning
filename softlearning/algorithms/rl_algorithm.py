@@ -8,6 +8,7 @@ import os
 import tensorflow as tf
 from tensorflow.python.training import training_util
 import numpy as np
+import time
 
 from softlearning.samplers import rollouts
 from softlearning.misc.utils import save_video
@@ -121,7 +122,10 @@ class RLAlgorithm(tf.contrib.checkpoint.Checkpointable):
         pass
 
     def _training_batch(self, batch_size=None):
-        return self.sampler.random_batch(batch_size)
+        start = time.time()
+        batch = self.sampler.random_batch(batch_size)
+        print("batch time", time.time() - start)
+        return batch
 
     def _evaluation_batch(self, *args, **kwargs):
         return self._training_batch(*args, **kwargs)
@@ -337,8 +341,8 @@ class RLAlgorithm(tf.contrib.checkpoint.Checkpointable):
                 self._do_training(
                     iteration=timestep,
                     batch=self._training_batch())
-            except:
-                print("failed to train")
+            except Exception as e:
+                print("failed to train", e)
                 continue
 
         self._num_train_steps += self._n_train_repeat

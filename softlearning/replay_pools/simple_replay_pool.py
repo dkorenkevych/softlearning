@@ -98,15 +98,18 @@ class SimpleReplayPool(FlexibleReplayPool):
         self.fresh_data = Value('i', 0)
         self._access_lock = Lock()
         self._fetch_loop = Process(target=self.fetch_loop, args=(batch_size,))
-        self._fetch_loop.start()
 
     def fetch_loop(self, batch_size, field_name_filter=None):
-        db = DBManager(table='sac_pool3')
+        db = DBManager(table=self.db.table)
         while True:
+            if self.db.last_id < 1000:
+                time.sleep(10)
+                continue
             try:
                 if self.fresh_data.value < self.prefetch_size:
-                    time.sleep(0.5)
+                    #time.sleep(0.5)
                     print("prefetching a batch", self.fresh_data.value)
+                    #random_indices = np.random.choice(range(np.minimum(db.last_id, 290000)), batch_size, replace=False)
                     random_indices = np.random.choice(range(db.last_id), batch_size, replace=False)
                     data = self.batch_by_indices_db(db,
                                              random_indices, field_name_filter=field_name_filter)
@@ -117,10 +120,14 @@ class SimpleReplayPool(FlexibleReplayPool):
                     self._access_lock.acquire()
                     self.fresh_data.value += 1
                     self._access_lock.release()
-                time.sleep(0.1)
-            except:
-                print("Couldn't get new data, reconnecting")
-                db.cnx, db.cursor = db.make_connection()
+                else:
+                    time.sleep(0.1)
+            except Exception as e:
+                print("Couldn't get new data, reconnecting", e)
+                try:
+                    db.cnx, db.cursor = db.make_connection()
+                except Exception as e:
+                    print("Couldn't reconnect to db", e)
                 time.sleep(1.0)
 
 
@@ -179,11 +186,11 @@ class SimpleReplayPool(FlexibleReplayPool):
 
         samples.update(
            **{
-               f'observations.{observation_key}': np.array(values)
+               'observations.{observation_key}': np.array(values)
                for observation_key, values in dict_observations.items()
            },
            **{
-               f'next_observations.{observation_key}': np.array(values)
+               'next_observations.{observation_key}': np.array(values)
                for observation_key, values in dict_next_observations.items()
            },
         )
