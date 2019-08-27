@@ -337,8 +337,8 @@ class RLAlgorithm(tf.contrib.checkpoint.Checkpointable):
                 self._do_training(
                     iteration=timestep,
                     batch=self._training_batch())
-            except:
-                print("failed to train")
+            except Exception as e:
+                print("failed to train", e)
                 continue
 
         self._num_train_steps += self._n_train_repeat
