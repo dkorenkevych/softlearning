@@ -234,11 +234,20 @@ class SAC(RLAlgorithm):
         # self._grad_op = [x[0] for x in grads_and_vars]
         # self._train_op = optimizer.apply_gradients(avg_grads_and_vars)
         # self._gradients = []
+        Q_grads = []
+        for it in range(len(self._Qs)):
+            train_variables = []
+            for var in self._Qs[it].trainable_variables:
+                if it > 0 and 'shared' in var.name:
+                    continue
+                train_variables.append(var)
+            Q_grads.append(self._Q_optimizers[it].compute_gradients(loss=Q_losses[it], var_list=train_variables))
+        Q_grads = tuple(Q_grads)
 
-        Q_grads = tuple(
-            Q_optimizer.compute_gradients(loss=Q_loss, var_list=Q.trainable_variables)
-            for i, (Q, Q_loss, Q_optimizer)
-            in enumerate(zip(self._Qs, Q_losses, self._Q_optimizers)))
+        # Q_grads = tuple(
+        #     Q_optimizer.compute_gradients(loss=Q_loss, var_list=Q.trainable_variables)
+        #     for i, (Q, Q_loss, Q_optimizer)
+        #     in enumerate(zip(self._Qs, Q_losses, self._Q_optimizers)))
 
         Q_grad_op = []
         Q_train_op = []

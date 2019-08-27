@@ -6,10 +6,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 from softlearning.distributions.squash_bijector import SquashBijector
-from softlearning.models.feedforward import feedforward_model, cnn_model
-from baselines.common.mpi_running_mean_std import RunningMeanStd
-from keras.backend import Function
-import baselines.common.tf_util as U
+from softlearning.models.feedforward import feedforward_model, cnn_model, head_model
+
 
 
 
@@ -52,10 +50,6 @@ class GaussianPolicy(LatentSpacePolicy):
         if preprocessor is not None:
             conditions = preprocessor(conditions)
 
-        self.ob_rms = RunningMeanStd(shape=input_shapes[0])
-        ob = U.get_placeholder(name="ob", dtype=tf.float32, shape=(None,) + input_shapes[0])
-        norm_ob = tf.clip_by_value((ob - self.ob_rms.mean) / self.ob_rms.std, -5.0, 5.0)
-        self.rms_fn = Function([ob], [norm_ob])
         #conditions = tf.clip_by_value((conditions - self.ob_rms.mean) / self.ob_rms.std, -5.0, 5.0)
 
         shift_and_log_scale_diag = self._shift_and_log_scale_diag_net(
@@ -237,11 +231,14 @@ class FeedforwardGaussianPolicy(GaussianPolicy):
                  hidden_layer_sizes,
                  activation='relu',
                  output_activation='linear',
+                 shared_inputs=None,
+                 shared_outputs=None,
                  *args, **kwargs):
         self._hidden_layer_sizes = hidden_layer_sizes
         self._activation = activation
         self._output_activation = output_activation
-
+        self.shared_inputs = shared_inputs
+        self.shared_outputs = shared_outputs
         #self._Serializable__initialize(locals())
         super(FeedforwardGaussianPolicy, self).__init__(*args, **kwargs)
 
@@ -253,8 +250,10 @@ class FeedforwardGaussianPolicy(GaussianPolicy):
         #     activation=self._activation,
         #     output_activation=self._output_activation)
 
-        shift_and_log_scale_diag_net = cnn_model(
-            input_shapes = [(1 + 5*2 + 4*256*256,)],
-            output_size = output_size
+        shift_and_log_scale_diag_net = head_model(
+            input_shapes = [],
+            output_size = output_size,
+            shared_inputs=self.shared_inputs,
+            shared_outputs=self.shared_outputs
         )
         return shift_and_log_scale_diag_net

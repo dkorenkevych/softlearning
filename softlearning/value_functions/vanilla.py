@@ -1,4 +1,4 @@
-from softlearning.models.feedforward import feedforward_model, cnn_model
+from softlearning.models.feedforward import feedforward_model, cnn_model, head_model
 
 
 def create_feedforward_Q_function(observation_shape,
@@ -6,7 +6,8 @@ def create_feedforward_Q_function(observation_shape,
                                   *args,
                                   observation_preprocessor=None,
                                   name='feedforward_Q',
-                                  rms=None,
+                                  shared_inputs=None,
+                                  shared_outputs=None,
                                   **kwargs):
     input_shapes = (observation_shape, action_shape)
     preprocessors = (observation_preprocessor, None)
@@ -17,10 +18,11 @@ def create_feedforward_Q_function(observation_shape,
     #     preprocessors=preprocessors,
     #     name=name,
     #     **kwargs)
-    return cnn_model(
-            input_shapes = [observation_shape, action_shape],
+    return head_model(
+            input_shapes = [action_shape],
             output_size = 1,
-            rms=rms
+            shared_inputs = shared_inputs,
+            shared_outputs = shared_outputs
         )
 
 

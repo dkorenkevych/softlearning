@@ -43,7 +43,7 @@ class SimpleReplayPool(FlexibleReplayPool):
         self.db = db_manager
         self.prefetch_size = prefetch_size
         observation_fields = normalize_observation_fields(observation_space)
-        observation_fields['observations']['shape'] = (observation_space.shape[-1] - np.product(self.img_dim),)
+        #observation_fields['observations']['shape'] = (observation_space.shape[-1] - np.product(self.img_dim),)
         observation_fields['observations']['ctype'] = 'f'
         observation_fields['images'] = {'dtype': 'uint8', 'ctype': 'B', 'shape': (np.product(self.img_dim),)}
         # It's a bit memory inefficient to save the observations twice,
@@ -82,8 +82,8 @@ class SimpleReplayPool(FlexibleReplayPool):
                 'terminals': [],
                 "observations": [],
                 "next_observations": [],
-                "images": [],
-                "next_images": []
+                # "images": [],
+                # "next_images": []
         }
         for modality in self.batch_data.keys():
             for _ in range(self.prefetch_size):
@@ -113,7 +113,13 @@ class SimpleReplayPool(FlexibleReplayPool):
                     random_indices = np.random.choice(range(db.last_id), batch_size, replace=False)
                     data = self.batch_by_indices_db(db,
                                              random_indices, field_name_filter=field_name_filter)
+
+                    data['observations'] = np.hstack([data['images'].astype('float32') / 255, data['observations']])
+                    data['next_observations'] = np.hstack(
+                        [data['next_images'].astype('float32') / 255, data['next_observations']])
                     buffer_pointer = self.write_buffer_p.value
+                    del data['images']
+                    del data['next_images']
                     for modality in data:
                         np.copyto(self.batch_data[modality][buffer_pointer], data[modality].astype(self.field_params[modality]['dtype']))
                     self.write_buffer_p.value = (buffer_pointer + 1) % self.prefetch_size
