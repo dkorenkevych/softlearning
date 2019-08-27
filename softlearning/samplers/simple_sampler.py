@@ -106,9 +106,9 @@ class SimpleSampler(BaseSampler):
         batch['observations'] = np.hstack([batch['images'].astype('float32')/255, batch['observations']])
         #self.policy.ob_rms.update(batch['observations'])
         batch['observations'] = self.policy.rms_fn([batch['observations']])[0]
-        print("batch processing", time.time() - start)
         batch['next_observations'] = np.hstack([batch['next_images'].astype('float32')/255, batch['next_observations']])
         batch['next_observations'] = self.policy.rms_fn([batch['next_observations']])[0]
+        print("batch processing", time.time() - start)
         del batch['images']
         del batch['next_images']
         return batch

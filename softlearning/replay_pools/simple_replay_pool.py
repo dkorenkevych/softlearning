@@ -128,6 +128,7 @@ class SimpleReplayPool(FlexibleReplayPool):
                     db.cnx, db.cursor = db.make_connection()
                 except Exception as e:
                     print("Couldn't reconnect to db", e)
+
                 time.sleep(1.0)
 
 

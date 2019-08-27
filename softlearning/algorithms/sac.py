@@ -82,8 +82,7 @@ class SAC(RLAlgorithm):
 
         self._policy_lr = lr
         self._Q_lr = lr
-        self._average_gradients = 9
-
+        self._average_gradients = 16
         self._reward_scale = reward_scale
         self._target_entropy = (
             -np.prod(self._training_environment.action_space.shape)
