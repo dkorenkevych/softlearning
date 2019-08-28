@@ -106,25 +106,32 @@ def cnn_core(input_shapes,
 
 
     x_image = Lambda(lambda x: x - tf.reduce_mean(x, axis=[-3, -2, -1], keep_dims=True))(ob_image)
-    x_image = TimeDistributed(Conv2D(32, (8, 8), strides=(4, 4),
-                                     activation="relu",
-                                     padding='same'), name="shared1")(x_image)
+    cnn_layers = [
+                     TimeDistributed(Conv2D(32, (8, 8), strides=(4, 4),
+                               activation="relu",
+                               padding='same'), name="shared1"),
+                     TimeDistributed(Conv2D(64, (5, 5), strides=(2, 2),
+                                            activation="relu",
+                                            padding='same'), name="shared2"),
+                     TimeDistributed(Conv2D(64, (5, 5), strides=(2, 2),
+                                            activation="relu",
+                                            padding='same'), name="shared3")
 
-    x_image = TimeDistributed(Conv2D(64, (5, 5), strides=(2, 2),
-                                     activation="relu",
-                                     padding='same'), name="shared2")(x_image)
+                 ]
+    count = 4
+    for i in range(3):
+        cnn_layers.append(TimeDistributed(Conv2D(64, (5, 5), strides=(1, 1),
+                               activation="relu",
+                               padding='same'), name="shared{}".format(count)))
+        count += 1
+    for i in range(5):
+        TimeDistributed(Conv2D(64, (3, 3), strides=(1, 1),
+                               activation="relu",
+                               padding='same'), name="shared{}".format(count))
+        count += 1
 
-    x_image = TimeDistributed(Conv2D(64, (5, 5), strides=(2, 2),
-                                     activation="relu",
-                                     padding='same'), name="shared3")(x_image)
-
-    x_image = TimeDistributed(Conv2D(64, (5, 5), strides=(1, 1),
-                                     activation="relu",
-                                     padding='same'), name="shared4")(x_image)
-
-    x_image = TimeDistributed(Conv2D(64, (3, 3), strides=(1, 1),
-                                     activation="relu",
-                                     padding='same'), name="shared5")(x_image)
+    for layer in cnn_layers:
+        x_image = layer(x_image)
 
 
     #x_image = TimeDistributed(keras_lambda(tf.contrib.layers.spatial_softmax))(x_image)
@@ -132,7 +139,7 @@ def cnn_core(input_shapes,
     #x_image = TimeDistributed(Lambda(tf.contrib.layers.spatial_softmax))(x_image)
     #x_image = Concatenate(axis=-1)([x_image, pool])
     x_image = TimeDistributed(Flatten())(x_image)
-    x_image = TimeDistributed(Dense(512, activation='relu'), name='shared6')(x_image)
+    x_image = TimeDistributed(Dense(512, activation='relu'), name="shared{}".format(count))(x_image)
     x_image = Flatten()(x_image)
     #x_image = Reshape((4*20*20*128,))(x_image)
     x_scalar = ob_scalar

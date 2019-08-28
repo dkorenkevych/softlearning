@@ -82,7 +82,7 @@ class SAC(RLAlgorithm):
 
         self._policy_lr = lr
         self._Q_lr = lr
-        self._average_gradients = 16
+        self._average_gradients = 12
         self._reward_scale = reward_scale
         self._target_entropy = (
             -np.prod(self._training_environment.action_space.shape)
@@ -367,7 +367,12 @@ class SAC(RLAlgorithm):
         #     loss=policy_loss,
         #     var_list=self._policy.trainable_variables)
 
-        policy_grads = self._policy_optimizer.compute_gradients(loss=policy_loss, var_list=self._policy.trainable_variables)
+        train_variables = []
+        for var in self._policy.trainable_variables:
+            if 'shared' in var.name:
+                continue
+            train_variables.append(var)
+        policy_grads = self._policy_optimizer.compute_gradients(loss=policy_loss, var_list=train_variables)
 
         policy_grad_op = []
         policy_train_op = []
@@ -424,10 +429,10 @@ class SAC(RLAlgorithm):
     def _do_training(self, iteration, batch):
         """Runs the operations for updating training and target ops."""
         feed_dict = self._get_feed_dict(iteration, batch)
-        start = time.time()
+        #start = time.time()
         grads = self._session.run(self._grad_ops, feed_dict=feed_dict)
-        print("grads time", time.time() - start)
-        start = time.time()
+        #print("grads time", time.time() - start)
+        #start = time.time()
         for net in self._grad_ops:
             self._gradients[net].append(grads[net])
             if len(self._gradients[net]) == self._average_gradients:
@@ -435,7 +440,7 @@ class SAC(RLAlgorithm):
                     feed_dict[placeholder] = np.stack([g[i] for g in self._gradients[net]], axis=0).mean(axis=0)
                 self._session.run(self._training_ops[net], feed_dict=feed_dict)
                 self._gradients[net] = []
-        print("grads processing time", time.time() - start)
+        #print("grads processing time", time.time() - start)
 
 
 

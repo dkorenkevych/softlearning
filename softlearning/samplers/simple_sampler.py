@@ -98,17 +98,17 @@ class SimpleSampler(BaseSampler):
     def random_batch(self, batch_size=None, **kwargs):
         batch_size = batch_size or self._batch_size
         observation_keys = getattr(self.env, 'observation_keys', None)
-        start = time.time()
+        #start = time.time()
         batch = self.pool.random_batch(
             batch_size, observation_keys=observation_keys, **kwargs)
-        print("pool batch time", time.time() - start)
-        start = time.time()
+        #print("pool batch time", time.time() - start)
+        #start = time.time()
         #batch['observations'] = np.hstack([batch['images'].astype('float32')/255, batch['observations']])
         #self.policy.ob_rms.update(batch['observations'])
         #batch['observations'] = self.policy.rms_fn([batch['observations']])[0]
         #batch['next_observations'] = np.hstack([batch['next_images'].astype('float32')/255, batch['next_observations']])
         #batch['next_observations'] = self.policy.rms_fn([batch['next_observations']])[0]
-        print("batch processing", time.time() - start)
+        #print("batch processing", time.time() - start)
         #del batch['images']
         #del batch['next_images']
         return batch
