@@ -110,68 +110,79 @@ def cnn_core(input_shapes,
     # stem
     x_image = TimeDistributed(Conv2D(32, (3, 3), strides=(2, 2),
                                activation="relu",
-                               padding='same'), name="shared1")(x_image)
+                               padding='valid'), name="shared1")(x_image)
 
     x_image = TimeDistributed(Conv2D(32, (3, 3), strides=(1, 1),
                                      activation="relu",
                                      padding='same'), name="shared2")(x_image)
 
-    x_image = TimeDistributed(Conv2D(64, (3, 3), strides=(1, 1),
+    x_image = TimeDistributed(Conv2D(32, (3, 3), strides=(1, 1),
                                      activation="relu",
                                      padding='same'), name="shared3")(x_image)
 
-    x_image1 = TimeDistributed(Conv2D(96, (3, 3), strides=(2, 2),
+    x_image1 = TimeDistributed(Conv2D(48, (3, 3), strides=(2, 2),
                                      activation="relu",
                                      padding='same'), name="shared4")(x_image)
 
     x_image2 = TimeDistributed(MaxPooling2D(pool_size=(3, 3), strides=(2, 2),
                                      padding='same'))(x_image)
-    print(x_image1, x_image2)
 
-    x_image = TimeDistributed(Concatenate())([x_image1, x_image2])
+    x_image = Concatenate()([x_image1, x_image2])
 
-    branch_1 = TimeDistributed(Conv2D(64, (1, 1), strides=(1, 1),
+    branch_1 = TimeDistributed(Conv2D(32, (1, 1), strides=(1, 1),
                                      activation="relu",
                                      padding='same'), name="shared5")(x_image)
 
-    branch_1 = TimeDistributed(Conv2D(96, (3, 3), strides=(1, 1),
+    branch_1 = TimeDistributed(Conv2D(48, (3, 3), strides=(1, 1),
                                       activation="relu",
                                       padding='same'), name="shared6")(branch_1)
 
-    branch_2 = TimeDistributed(Conv2D(64, (1, 1), strides=(1, 1),
+    branch_2 = TimeDistributed(Conv2D(32, (1, 1), strides=(1, 1),
                                       activation="relu",
                                       padding='same'), name="shared7")(x_image)
 
-    branch_2 = TimeDistributed(Conv2D(64, (7, 1), strides=(1, 1),
+    branch_2 = TimeDistributed(Conv2D(32, (7, 1), strides=(1, 1),
                                       activation="relu",
                                       padding='same'), name="shared8")(branch_2)
 
-    branch_2 = TimeDistributed(Conv2D(64, (1, 7), strides=(1, 1),
+    branch_2 = TimeDistributed(Conv2D(32, (1, 7), strides=(1, 1),
                                       activation="relu",
                                       padding='same'), name="shared9")(branch_2)
 
-    branch_2 = TimeDistributed(Conv2D(96, (3, 3), strides=(1, 1),
+    branch_2 = TimeDistributed(Conv2D(48, (3, 3), strides=(1, 1),
                                       activation="relu",
                                       padding='same'), name="shared10")(branch_2)
 
-    x_image = TimeDistributed(Concatenate())([branch_1, branch_2])
+    x_image = Concatenate()([branch_1, branch_2])
 
-    x_image1 = TimeDistributed(Conv2D(96, (3, 3), strides=(1, 1),
+    x_image1 = TimeDistributed(Conv2D(96, (3, 3), strides=(2, 2),
                                       activation="relu",
                                       padding='same'), name="shared11")(x_image)
 
     x_image2 = TimeDistributed(MaxPooling2D(pool_size=(3, 3), strides=(2, 2),
                                             padding='same'))(x_image)
 
-    x_image = TimeDistributed(Concatenate(axis=-1))([x_image1, x_image2])
+    x_image = Concatenate(axis=-1)([x_image1, x_image2])
 
     x_image = TimeDistributed(Conv2D(64, (1, 1), strides=(1, 1),
                                       activation="relu",
                                       padding='same'), name="shared12")(x_image)
 
+    x_image1 = TimeDistributed(Conv2D(96, (3, 3), strides=(2, 2),
+                                      activation="relu",
+                                      padding='same'), name="shared13")(x_image)
+
+    x_image2 = TimeDistributed(MaxPooling2D(pool_size=(3, 3), strides=(2, 2),
+                                            padding='same'))(x_image)
+
+    x_image = Concatenate(axis=-1)([x_image1, x_image2])
+
+    x_image = TimeDistributed(Conv2D(64, (1, 1), strides=(1, 1),
+                                     activation="relu",
+                                     padding='same'), name="shared14")(x_image)
 
     cnn_layers = []
-    count = 13
+    count = 15
     for i in range(5):
         TimeDistributed(Conv2D(64, (3, 3), strides=(1, 1),
                                activation="relu",
