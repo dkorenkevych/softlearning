@@ -4,7 +4,7 @@ import numpy as np
 
 
 from tensorflow.keras.layers import *
-from keras.applications.inception_v3 import inception_v3
+from keras import backend as K
 
 # from keras.layers import Lambda as keras_lambda
 # from keras.layers.wrappers import TimeDistributed
@@ -72,7 +72,10 @@ def cnn_core(input_shapes,
         for preprocessor, input_ in zip(preprocessors, inputs)
     ]
 
-    preprocessed_inputs[0] = Lambda(lambda x: tf.clip_by_value((x - ob_rms.mean) / ob_rms.std, -5.0, 5.0))(preprocessed_inputs[0])
+    # def clip_fn(x):
+    #     return K.clip((x - ob_rms.mean) / ob_rms.std, -5.0, 5.0)
+
+    preprocessed_inputs[0] = Lambda(lambda x: K.clip((x - ob_rms.mean) / ob_rms.std, -5.0, 5.0))(preprocessed_inputs[0])
 
     if len(preprocessed_inputs) > 1:
         concatenated = Concatenate(axis=-1)(preprocessed_inputs)
@@ -106,7 +109,7 @@ def cnn_core(input_shapes,
 
 
 
-    x_image = Lambda(lambda x: x - tf.reduce_mean(x, axis=[-3, -2, -1], keep_dims=True))(ob_image)
+    x_image = Lambda(lambda x: x - K.mean(x, axis=[-3, -2, -1], keepdims=True))(ob_image)
     # stem
     x_image = TimeDistributed(Conv2D(32, (3, 3), strides=(2, 2),
                                activation="relu",
@@ -183,7 +186,7 @@ def cnn_core(input_shapes,
 
     cnn_layers = []
     count = 15
-    for i in range(5):
+    for i in range(1):
         TimeDistributed(Conv2D(64, (3, 3), strides=(1, 1),
                                activation="relu",
                                padding='same'), name="shared{}".format(count))
@@ -199,6 +202,7 @@ def cnn_core(input_shapes,
     #x_image = Concatenate(axis=-1)([x_image, pool])
     x_image = TimeDistributed(Flatten())(x_image)
     x_image = TimeDistributed(Dense(512, activation='relu'), name="shared{}".format(count))(x_image)
+    #x_image = TimeDistributed(Dropout(rate=0.5))(x_image)
     x_image = Flatten()(x_image)
     #x_image = Reshape((4*20*20*128,))(x_image)
     x_scalar = ob_scalar

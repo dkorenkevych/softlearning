@@ -173,10 +173,11 @@ def head_model(input_shapes,
         concatenated = shared_outputs[0]
     ob = concatenated
     x = Dense(256, activation='relu', name='lin2')(ob)
+    #x = Dropout(rate=0.5)(x)
     x = Dense(256, activation='relu', name='lin3')(x)
+    #x = Dropout(rate=0.5)(x)
     out = Dense(output_size, name='final')(x)
     model = PicklableKerasModel(inputs, out, name=name)
-
     return model
 
 

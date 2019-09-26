@@ -110,13 +110,40 @@ class SimpleReplayPool(FlexibleReplayPool):
                     #time.sleep(0.5)
                     print("prefetching a batch", self.fresh_data.value)
                     #random_indices = np.random.choice(range(np.minimum(db.last_id, 290000)), batch_size, replace=False)
-                    random_indices = np.random.choice(range(db.last_id), batch_size, replace=False)
+                    random_indices = np.random.choice(range(db.last_id - 1000000, db.last_id), batch_size, replace=False)
                     data = self.batch_by_indices_db(db,
                                              random_indices, field_name_filter=field_name_filter)
+                    data_batch = data['images']
+                    orig_shape = data_batch.shape
+                    data_batch = data_batch.reshape((data['images'].shape[0], 4, 256, 256))
+                    num_im = data_batch.shape[0] * data_batch.shape[1]
+                    shift_x = np.random.randint(-10, 10, num_im)
+                    shift_y = np.random.randint(-10, 10, num_im)
+                    new_batch = np.zeros(data_batch.shape).reshape((num_im,) + data_batch.shape[2:])
+                    big_im = np.zeros(
+                        (num_im,) + (data_batch.shape[2] + 20, data_batch.shape[3] + 20) + data_batch.shape[4:])
+                    data_batch = data_batch.reshape(new_batch.shape)
+                    for i in range(num_im):
+                        big_im[i, 10 + shift_x[i]: 10 + shift_x[i] + data_batch.shape[1],
+                        10 + shift_y[i]:10 + shift_y[i] + data_batch.shape[2]] = data_batch[i]
+                    new_batch = big_im[:, 10:-10, 10:-10].reshape(orig_shape)
 
-                    data['observations'] = np.hstack([data['images'].astype('float32') / 255, data['observations']])
+                    #new_batch_next = np.zeros(data_batch.shape).reshape((num_im,) + data_batch.shape[2:])
+                    big_im = np.zeros(
+                        (num_im,) + (data_batch.shape[1] + 20, data_batch.shape[2] + 20))
+                    data_batch = data['next_images'].reshape(data_batch.shape)
+                    for i in range(num_im):
+                        big_im[i, 10 + shift_x[i]: 10 + shift_x[i] + data_batch.shape[1],
+                        10 + shift_y[i]:10 + shift_y[i] + data_batch.shape[2]] = data_batch[i]
+                    new_batch_next = big_im[:, 10:-10, 10:-10].reshape(orig_shape)
+
+                    data['observations'] = np.hstack([new_batch.astype('float32') / 255, data['observations']])
                     data['next_observations'] = np.hstack(
-                        [data['next_images'].astype('float32') / 255, data['next_observations']])
+                        [new_batch_next.astype('float32') / 255, data['next_observations']])
+    
+                    # data['observations'] = np.hstack([data['images'].astype('float32') / 255, data['observations']])
+                    # data['next_observations'] = np.hstack(
+                    #     [data['next_images'].astype('float32') / 255, data['next_observations']])
                     buffer_pointer = self.write_buffer_p.value
                     del data['images']
                     del data['next_images']
@@ -126,8 +153,7 @@ class SimpleReplayPool(FlexibleReplayPool):
                     self._access_lock.acquire()
                     self.fresh_data.value += 1
                     self._access_lock.release()
-                else:
-                    time.sleep(0.1)
+                time.sleep(0.1)
             except Exception as e:
                 print("Couldn't get new data, reconnecting", e)
                 try:

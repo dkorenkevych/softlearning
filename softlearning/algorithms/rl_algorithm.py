@@ -330,11 +330,11 @@ class RLAlgorithm(tf.contrib.checkpoint.Checkpointable):
 
     def _do_training_repeats(self, timestep):
         """Repeat training _n_train_repeat times every _train_every_n_steps"""
-        if timestep % self._train_every_n_steps > 0: return
-        trained_enough = (
-            self._train_steps_this_epoch
-            > self._max_train_repeat_per_timestep * self._timestep)
-        if trained_enough: return
+        # if timestep % self._train_every_n_steps > 0: return
+        # trained_enough = (
+        #     self._train_steps_this_epoch
+        #     > self._max_train_repeat_per_timestep * self._timestep)
+        # if trained_enough: return
 
         for i in range(self._n_train_repeat):
             try:
