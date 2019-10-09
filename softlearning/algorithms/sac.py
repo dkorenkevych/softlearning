@@ -4,6 +4,7 @@ from numbers import Number
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+from baselines.common.mpi_running_mean_std import RunningMeanStd
 
 from .rl_algorithm import RLAlgorithm
 
@@ -81,6 +82,7 @@ class SAC(RLAlgorithm):
 
         self._policy_lr = lr
         self._Q_lr = lr
+        self.value_rms = RunningMeanStd(shape=(1,))
 
         self._reward_scale = reward_scale
         self._target_entropy = (
@@ -178,7 +180,7 @@ class SAC(RLAlgorithm):
             [self._next_observations_ph], next_actions)
 
         next_Qs_values = tuple(
-            Q([self._next_observations_ph, next_actions])
+            Q([self._next_observations_ph, next_actions]) * self.value_rms.std + self.value_rms.mean
             for Q in self._Q_targets)
 
         min_next_Q = tf.reduce_min(next_Qs_values, axis=0)
@@ -188,8 +190,7 @@ class SAC(RLAlgorithm):
             reward=self._reward_scale * self._rewards_ph,
             discount=self._discount,
             next_value=(1 - self._terminals_ph) * next_value)
-
-        return Q_target
+        return (Q_target - self.value_rms.mean)/self.value_rms.std, Q_target
 
     def _init_critic_update(self):
         """Create minimization operation for critic Q-function.
@@ -201,7 +202,7 @@ class SAC(RLAlgorithm):
         See Equations (5, 6) in [1], for further information of the
         Q-function update rule.
         """
-        Q_target = tf.stop_gradient(self._get_Q_target())
+        Q_target, self.raw_q_target = [q[0] for q in tf.split(tf.stop_gradient(self._get_Q_target()), axis=0, num_or_size_splits=2)]
 
         assert Q_target.shape.as_list() == [None, 1]
 
@@ -224,7 +225,6 @@ class SAC(RLAlgorithm):
             Q_optimizer.minimize(loss=Q_loss, var_list=Q.trainable_variables)
             for i, (Q, Q_loss, Q_optimizer)
             in enumerate(zip(self._Qs, Q_losses, self._Q_optimizers)))
-
         self._training_ops.update({'Q': tf.group(Q_training_ops)})
 
     def _init_actor_update(self):
@@ -337,8 +337,8 @@ class SAC(RLAlgorithm):
         """Runs the operations for updating training and target ops."""
 
         feed_dict = self._get_feed_dict(iteration, batch)
-        self._session.run(self._training_ops, feed_dict)
-
+        val = self._session.run([self.raw_q_target, self._training_ops], feed_dict)
+        self.value_rms.update(val[0])
         if iteration % self._target_update_interval == 0:
             # Run target ops here.
             self._update_target()

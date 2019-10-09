@@ -10,7 +10,7 @@ from softlearning.models.feedforward import feedforward_model, cnn_model
 
 
 
-from rl_experiments.algorithms.baselines.policies.cnn_policy import CnnPolicy
+#from rl_experiments.algorithms.baselines.policies.cnn_policy import CnnPolicy
 
 from .base_policy import LatentSpacePolicy
 
